@@ -1,0 +1,12 @@
+c:\users\alexkh\documents\visual studio 2010\Projects\Daemon\Daemon\bin\Debug\Daemon.exe
+c:\users\alexkh\documents\visual studio 2010\Projects\Daemon\Daemon\bin\Debug\Daemon.pdb
+c:\users\alexkh\documents\visual studio 2010\Projects\Daemon\Daemon\obj\x86\Debug\Daemon.Properties.Resources.resources
+c:\users\alexkh\documents\visual studio 2010\Projects\Daemon\Daemon\obj\x86\Debug\Daemon.csproj.GenerateResource.Cache
+c:\users\alexkh\documents\visual studio 2010\Projects\Daemon\Daemon\obj\x86\Debug\Daemon.exe
+c:\users\alexkh\documents\visual studio 2010\Projects\Daemon\Daemon\obj\x86\Debug\Daemon.pdb
+c:\users\alexkh\documents\visual studio 2010\Projects\Daemon\Daemon\obj\x86\Debug\Daemon.Form1.resources
+C:\Users\alexkh\documents\visual studio 2010\Projects\Daemon\Daemon\bin\Debug\HtmlAgilityPack.dll
+C:\Users\alexkh\documents\visual studio 2010\Projects\Daemon\Daemon\bin\Debug\HtmlAgilityPack.pdb
+C:\Users\alexkh\documents\visual studio 2010\Projects\Daemon\Daemon\bin\Debug\HtmlAgilityPack.xml
+C:\Users\alexkh\documents\visual studio 2010\Projects\Daemon\Daemon\obj\x86\Debug\Daemon.csprojResolveAssemblyReference.cache
+C:\Users\alexkh\documents\visual studio 2010\Projects\Daemon\Daemon\bin\Debug\sqlite3.dll
