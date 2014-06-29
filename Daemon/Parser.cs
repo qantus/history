@@ -74,6 +74,42 @@ namespace Daemon
             return 0;
         }
 
+        public string StringFromElement(XElement xElement, string DefaultValue = "")
+        {
+            if (xElement != null) 
+            {
+                return xElement.Value;
+            }
+            return DefaultValue;
+        }
+
+        public int IntFromElement(XElement xElement, int DefaultValue = 0)
+        {
+            if (xElement != null)
+            {
+                return this.IntFromString(xElement.Value);
+            }
+            return DefaultValue;
+        }
+
+        public long LongFromElement(XElement xElement, long DefaultValue = 0)
+        {
+            if (xElement != null)
+            {
+                return this.LongFromString(xElement.Value);
+            }
+            return DefaultValue;
+        }
+
+        public DateTime DateFromElement(XElement xElement, DateTime DefaultValue = new DateTime())
+        {
+            if (xElement != null)
+            {
+                return this.DateFromString(xElement.Value);
+            }
+            return DefaultValue;
+        }
+
         public void processXML(string fileName)
         {
             Database db = this.db();
@@ -83,7 +119,7 @@ namespace Daemon
             try
             {
                 xDocument = XDocument.Load(fileName);
-                var rawUser = this.XMLGetUser(xDocument, db);
+                var rawUser = this.XMLGetUser(xDocument);
                 user = rawUser;
             }
             catch (Exception e) { };
@@ -96,20 +132,33 @@ namespace Daemon
                 }
                 catch (Exception e) { };
                 db.save(user);
+
+                try
+                {
+                    this.XMLSyncRequests(user, xDocument);
+                }
+                catch (Exception e) { };
+
+                try
+                {
+                    this.XMLSyncAccounts(user, xDocument);
+                }
+                catch (Exception e) { };
             }
 
         }
 
-        public User XMLGetUser(XDocument xDocument, Database db)
-        { 
+        public User XMLGetUser(XDocument xDocument)
+        {
+            Database db = this.db();
             var PersonReq = xDocument.Descendants("PersonReq");
             if (PersonReq.Count() > 0)
             {
                 var person = PersonReq.ElementAt(0);
-                var FirstName = person.Element("first").Value;
-                var MiddleName = person.Element("paternal").Value;
-                var LastName = person.Element("name1").Value;
-                var BirthDate = this.DateFromString(person.Element("birthDt").Value);
+                var FirstName = this.StringFromElement(person.Element("first"));
+                var MiddleName = this.StringFromElement(person.Element("paternal"));
+                var LastName = this.StringFromElement(person.Element("name1"));
+                var BirthDate = this.DateFromElement(person.Element("birthDt"));
                 if (FirstName != "" && LastName != "")
                 {
                     var user = db.GetOrCreateUser(FirstName, MiddleName, LastName);
@@ -129,8 +178,8 @@ namespace Daemon
             {
                 var person = CalcRaw.ElementAt(0);
 
-                user.TotalAccounts = this.IntFromString(person.Element("totalAccts").Value);
-                user.ActiveAccounts = this.IntFromString(person.Element("totalActiveBalanceAccounts").Value);
+                user.TotalAccounts = this.IntFromElement(person.Element("totalAccts"));
+                user.ActiveAccounts = this.IntFromElement(person.Element("totalActiveBalanceAccounts"));
 
                 user.HighCredit = this.XMLNestedLongFetch(person, "totalHighCredit", "Value");
                 user.CurrentBalance = this.XMLNestedLongFetch(person, "totalCurrentBalance", "Value");
@@ -138,14 +187,104 @@ namespace Daemon
                 user.OutstandingBalance = this.XMLNestedLongFetch(person, "totalOutstandingBalance", "Value");
                 user.SheduledPayments = this.XMLNestedLongFetch(person, "totalScheduledPaymnts", "Value");
 
-                user.TotalRequests = this.IntFromString(person.Element("totalInquiries").Value);
-                user.RecentRequests = this.IntFromString(person.Element("recentInquiries").Value);
-                user.LongRequests = this.IntFromString(person.Element("collectionsInquiries").Value);
-                user.RecentRequest = person.Element("mostRecentInqText").Value;
-                user.RecentAcc = this.DateFromString(person.Element("mostRecentAcc").Value);
-                user.OldestAcc = this.DateFromString(person.Element("oldest").Value);
+                user.TotalRequests = this.IntFromElement(person.Element("totalInquiries"));
+                user.RecentRequests = this.IntFromElement(person.Element("recentInquiries"));
+                user.LongRequests = this.IntFromElement(person.Element("collectionsInquiries"));
+                user.RecentRequest = this.StringFromElement(person.Element("mostRecentInqText"));
+                user.RecentAcc = this.DateFromElement(person.Element("mostRecentAcc"));
+                user.OldestAcc = this.DateFromElement(person.Element("oldest"));
             }
             return user;
+        }
+
+        public void XMLSyncRequests(User user, XDocument xDocument)
+        {
+            Database db = this.db();
+            var RequestsRaw = xDocument.Descendants("InquiryReply");
+            foreach(XElement RawRequest in RequestsRaw)
+            {
+                var Period = this.StringFromElement(RawRequest.Element("inquiryPeriod"));
+                var Number = this.StringFromElement(RawRequest.Element("inqControlNum"));
+                var Sum = this.LongFromElement(RawRequest.Element("inqAmount"));
+                var Name = this.StringFromElement(RawRequest.Element("inqPurposeText"));
+                
+                if (Number != "")
+                {
+                    var request = db.GetOrCreateRequest(user, Number);
+                    request.Sum = Sum;
+                    request.Name = Name;
+                    request.Period = Period;
+                    db.save(request);
+                }
+            }
+        }
+
+        public void XMLSyncAccounts(User user, XDocument xDocument)
+        {
+            Database db = this.db();
+            var RequestsRaw = xDocument.Descendants("AccountReply");
+            foreach (XElement RawRequest in RequestsRaw)
+            {
+                var Number = this.StringFromElement(RawRequest.Element("serialNum"));
+                var Type = this.StringFromElement(RawRequest.Element("acctTypeText"));
+                var Relation = this.StringFromElement(RawRequest.Element("ownerIndicText"));
+                var Collateral = this.StringFromElement(RawRequest.Element("collateral2Text"));
+                var Status = this.StringFromElement(RawRequest.Element("accountRatingText"));
+                var Frequency = this.StringFromElement(RawRequest.Element("interestPaymentFrequencyText"));
+
+                var Limit = this.LongFromElement(RawRequest.Element("creditLimit"));
+                var CurrentBalance = this.LongFromElement(RawRequest.Element("curBalanceAmt"));
+                var PastDue = this.LongFromElement(RawRequest.Element("amtPastDue"));
+                var NextPay = this.LongFromElement(RawRequest.Element("termsAmt"));
+                var Outstanding = this.LongFromElement(RawRequest.Element("amtOutstanding"));
+
+                var Outstanding30 = this.IntFromElement(RawRequest.Element("numDays30"));
+                var Outstanding60 = this.IntFromElement(RawRequest.Element("numDays60"));
+                var Outstanding90 = this.IntFromElement(RawRequest.Element("numDays90"));
+
+                var Months = this.IntFromElement(RawRequest.Element("monthsReviewed"));
+                var MonthsScheme = this.StringFromElement(RawRequest.Element("paymtPat"));
+                var MonthsSchemeStartDate = this.DateFromElement(RawRequest.Element("paymtPatStartDt"));
+
+                var CloseDate = this.DateFromElement(RawRequest.Element("closedDt"));
+                var OpenDate = this.DateFromElement(RawRequest.Element("openedDt"));
+                var StatusDate = this.DateFromElement(RawRequest.Element("accountRatingDate"));
+                var LastPaymentDate = this.DateFromElement(RawRequest.Element("lastPaymtDt"));
+                var UpdateDate = this.DateFromElement(RawRequest.Element("reportingDt"));
+
+                if (Number != "")
+                {
+                    var account = db.GetOrCreateAccount(user, Number);
+
+                    account.Type = Type;
+                    account.Relation = Relation;
+                    account.Collateral = Collateral;
+                    account.Status = Status;
+                    account.Frequency = Frequency;
+
+                    account.Limit = Limit;
+                    account.CurrentBalance = CurrentBalance;
+                    account.PastDue = PastDue;
+                    account.NextPay = NextPay;
+                    account.Outstanding = Outstanding;
+
+                    account.Outstanding30 = Outstanding30;
+                    account.Outstanding60 = Outstanding60;
+                    account.Outstanding90 = Outstanding90;
+
+                    account.Months = Months;
+                    account.MonthsScheme = MonthsScheme;
+                    account.MonthsSchemeStartDate = MonthsSchemeStartDate;
+
+                    account.CloseDate = CloseDate;
+                    account.OpenDate = OpenDate;
+                    account.StatusDate = StatusDate;
+                    account.LastPaymentDate = LastPaymentDate;
+                    account.UpdateDate = UpdateDate;
+
+                    db.save(account);
+                }
+            }
         }
 
         public long XMLNestedLongFetch(XElement xElement, string FirstLevel, string SecondLevel)

@@ -37,6 +37,7 @@ namespace Daemon
         public int RecentRequests { get; set; }
         public int LongRequests { get; set; }
 
+        [MaxLength(255)]
         public string RecentRequest { get; set; }
 
         public override string ToString()
@@ -53,13 +54,63 @@ namespace Daemon
         public int UserId { get; set; }
         [MaxLength(255)]
         public string Name { get; set; }
+        [MaxLength(255)]
+        public string Period { get; set; }
 
         public long Sum { get; set; }
-        public DateTime Date { get; set; }
+        [Indexed, MaxLength(255)]
+        public string Number { get; set; }
 
         public override string ToString()
         {
             return string.Format("{0} - {1}", Name, Sum);
+        }
+    }
+
+    public class Account
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        [Indexed]
+        public int UserId { get; set; }
+        [Indexed, MaxLength(255)]
+        public string Number { get; set; }
+
+        [MaxLength(255)]
+        public string Type { get; set; }
+        [MaxLength(255)]
+        public string Relation { get; set; }
+        [MaxLength(255)]
+        public string Frequency { get; set; }
+        [MaxLength(255)]
+        public string Collateral { get; set; }
+        [MaxLength(255)]
+        public string Status { get; set; }
+
+        public long Limit { get; set; }
+        public long CurrentBalance { get; set; }
+        public long PastDue { get; set; }
+        public long NextPay { get; set; }
+        public long Outstanding { get; set; }
+        
+        public int Outstanding30 { get; set; }
+        public int Outstanding60 { get; set; }
+        public int Outstanding90 { get; set; }
+
+        public int Months { get; set; }
+        [MaxLength(255)]
+        public string MonthsScheme { get; set; }
+        public DateTime MonthsSchemeStartDate { get; set; }
+
+        public DateTime CloseDate { get; set; }
+        public DateTime OpenDate { get; set; }
+        public DateTime StatusDate { get; set; }
+        public DateTime LastPaymentDate { get; set; }
+        public DateTime UpdateDate { get; set; }
+
+        public override string ToString()
+        {
+            return string.Format("{0} - {1}", Type, Limit);
         }
     }
 
@@ -69,6 +120,7 @@ namespace Daemon
         {
             CreateTable<User>();
             CreateTable<Request>();
+            CreateTable<Account>();
         }
 
         public IEnumerable<User> QueryAllUsers()
@@ -103,6 +155,44 @@ namespace Daemon
                 user.LastName = LastName;
             }
             return user;
+        }
+
+        public Request QueryRequest(User user, string Number)
+        {
+            return (from s in Table<Request>()
+                    where s.UserId == user.Id && s.Number == Number
+                    select s).FirstOrDefault();
+        }
+
+        public Request GetOrCreateRequest(User user, string Number)
+        {
+            var request = this.QueryRequest(user, Number);
+            if (request == null)
+            {
+                request = new Request();
+                request.UserId = user.Id;
+                request.Number = Number;
+            }
+            return request;
+        }
+
+        public Account QueryAccount(User user, string Number)
+        {
+            return (from s in Table<Account>()
+                    where s.UserId == user.Id && s.Number == Number
+                    select s).FirstOrDefault();
+        }
+
+        public Account GetOrCreateAccount(User user, string Number)
+        {
+            var account = this.QueryAccount(user, Number);
+            if (account == null)
+            {
+                account = new Account();
+                account.UserId = user.Id;
+                account.Number = Number;
+            }
+            return account;
         }
 
         public void save(object obj)
